@@ -5,7 +5,21 @@ const cloudinary = require('../utils/cloudinary');
 exports.getAllTypes = async (req, res) => {
     try {
       const types = await Type.find();
-      res.status(200).json(types);
+      res.status(200).json({
+        message:"fetch category successfully",
+        data:types
+      });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  };
+
+  exports.getAllTypesforTypes = async (req, res) => {
+    try {
+      const types = await Type.find();
+      res.status(200).json(
+        types
+      );
     } catch (error) {
       res.status(500).json({ message: error.message });
     }
@@ -23,7 +37,7 @@ exports.getAllTypes = async (req, res) => {
       res.status(500).json({ message: error.message });
     }
   };
-  
+
   exports.createType = async (req, res) => {
     try {
       const { name, description } = req.body;
@@ -31,31 +45,39 @@ exports.getAllTypes = async (req, res) => {
       // Check if the type already exists
       const existingType = await Type.findOne({ name });
       if (existingType) {
-        return res.status(400).json({ message: 'Type already exists' });
+        return res.status(400).json({ message: "Type already exists" });
       }
   
-      let image = '';
+      let image = "";
+  
+      // ✅ Handle Cloudinary Image Upload Properly Inside This Function
       if (req.file) {
-        // Upload image to Cloudinary
-        const result = await new Promise((resolve, reject) => {
-          cloudinary.uploader.upload_stream(
-            { folder: 'types' },
-            (error, result) => {
-              if (error) reject(error);
-              else resolve(result.secure_url);
-            }
-          ).end(req.file.buffer);
-        });
-        image = result;
+        try {
+          image = await new Promise((resolve, reject) => {
+            const stream = cloudinary.uploader.upload_stream({ folder: "types" }, (error, result) => {
+              if (error) {
+                console.error("Cloudinary Upload Error:", error);
+                reject(error);
+              } else {
+                resolve(result.secure_url);
+              }
+            });
+            stream.end(req.file.buffer); // Send the image buffer to Cloudinary
+          });
+        } catch (uploadError) {
+          console.error("Cloudinary Upload Failed:", uploadError);
+          return res.status(500).json({ message: "Image upload failed", error: uploadError.message });
+        }
       }
   
-      // Save new type
-      const newType = new Type({ name, image, description });
+      // ✅ Create and Save the New Type
+      const newType = new Type({ name, description, image });
       await newType.save();
   
-      res.status(201).json(newType);
+      res.status(201).json({ message: "Type created successfully", type: newType });
     } catch (error) {
-      res.status(500).json({ message: 'Error creating type', error: error.message });
+      console.error("Server Error:", error);
+      res.status(500).json({ message: "Internal Server Error", error: error.message });
     }
   };
   

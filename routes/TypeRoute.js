@@ -9,6 +9,7 @@ const upload = multer({ storage });
 
 // 🔹 Routes for types
 router.get('/get-all-types', typeController.getAllTypes);
+router.get('/get-all-types-for-types', typeController.getAllTypesforTypes);
 router.get('/get-all-by-id/:id', typeController.getTypeById);
 router.post('/create-type', upload.single('image'), typeController.createType);
 router.put('/update-type/:id', upload.single('image'), typeController.updateType);

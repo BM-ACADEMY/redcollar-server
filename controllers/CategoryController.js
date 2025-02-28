@@ -36,17 +36,17 @@ const upload = multer({
 
 
 // ✅ Get all categories
-// exports.getAllCategories = async (req, res) => {
-//   try {
-//     const categories = await Category.find();
-//     res.status(200).json({
-//       message:"fetch category successfully",
-//       data:categories
-//     });
-//   } catch (error) {
-//     res.status(500).json({ message: 'Error fetching categories', error });
-//   }
-// };
+exports.getAllCategoriesforAdmin = async (req, res) => {
+  try {
+    const categories = await Category.find();
+    res.status(200).json({
+      message:"fetch category successfully",
+      data:categories
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching categories', error });
+  }
+};
 
 
 exports.getAllCategories = async (req, res) => {

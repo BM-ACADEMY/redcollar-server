@@ -299,8 +299,9 @@ exports.getProductsByCategory = async (req, res) => {
 
 exports.createProduct = async (req, res) => {
   try {
-    const { name, description, category, brand, original_price, discount_percentage, color, sizes, stock_quantity, gender, age_category, similar_products, rating, is_active, deliveryOption } = req.body;
-
+    const { name, description, category,type ,brand, original_price, discount_percentage, color, sizes, stock_quantity, gender, age_category, similar_products, rating, is_active, deliveryOption } = req.body;
+    console.log(req.body);
+    
     let imageUrls = [];
     if (req.files) {
       imageUrls = await Promise.all(req.files.map(file => uploadToCloudinary(file.buffer)));
@@ -310,6 +311,7 @@ exports.createProduct = async (req, res) => {
       name,
       description,
       category,
+      type,
       brand,
       original_price,
       discount_percentage,
