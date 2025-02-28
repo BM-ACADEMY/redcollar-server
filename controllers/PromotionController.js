@@ -3,34 +3,35 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const moment = require('moment');
+const cloudinary = require('../utils/cloudinary');
 // Define the upload directory inside 'uploads/promotions'
-const uploadDir = path.join(__dirname, '..', 'uploads', 'promotions');
+// const uploadDir = path.join(__dirname, '..', 'uploads', 'promotions');
 
-// Create the 'promotions' folder if it doesn't exist
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
+// // Create the 'promotions' folder if it doesn't exist
+// if (!fs.existsSync(uploadDir)) {
+//   fs.mkdirSync(uploadDir, { recursive: true });
+// }
 
-// Set up multer storage for image upload in 'uploads/promotions'
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, uploadDir); // Save image to 'uploads/promotions' folder
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const extname = path.extname(file.originalname); // Get file extension
-    cb(null, file.fieldname + '-' + uniqueSuffix + extname); // Create unique filename
-  },
-});
+// // Set up multer storage for image upload in 'uploads/promotions'
+// const storage = multer.diskStorage({
+//   destination: function (req, file, cb) {
+//     cb(null, uploadDir); // Save image to 'uploads/promotions' folder
+//   },
+//   filename: function (req, file, cb) {
+//     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+//     const extname = path.extname(file.originalname); // Get file extension
+//     cb(null, file.fieldname + '-' + uniqueSuffix + extname); // Create unique filename
+//   },
+// });
 
-const upload = multer({ 
-  storage: storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // Limit file size to 10MB
-  fileFilter: (req, file, cb) => {
-    // Accept all file types by always calling cb with true
-    cb(null, true);
-  }
-});
+// const upload = multer({ 
+//   storage: storage,
+//   limits: { fileSize: 10 * 1024 * 1024 }, // Limit file size to 10MB
+//   fileFilter: (req, file, cb) => {
+//     // Accept all file types by always calling cb with true
+//     cb(null, true);
+//   }
+// });
 
 
 // Get all promotions
@@ -40,6 +41,22 @@ exports.getAllPromotions = async (req, res) => {
     res.status(200).json({
       message:"fetch promotions successfully",
       data:promotions
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+exports.getLastPromotion = async (req, res) => {
+  try {
+    const lastPromotion = await Promo.findOne().sort({ _id: -1 }); // Sort by _id descending (latest first)
+
+    if (!lastPromotion) {
+      return res.status(404).json({ message: 'No promotions found' });
+    }
+
+    res.status(200).json({
+      message: "Fetched the last promotion successfully",
+      data: lastPromotion
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -61,92 +78,183 @@ exports.getPromotionById = async (req, res) => {
 
 // Create a new promotion
 // Create a promotion
+// exports.createPromotion = async (req, res) => {
+//   upload.single('Image')(req, res, async (err) => {
+//     if (err instanceof multer.MulterError) {
+//       return res.status(500).json({ message: err.message });
+//     } else if (err) {
+//       return res.status(400).json({ message: 'Invalid file format' });
+//     }
+
+//     try {
+//       if (!req.file) {
+//         return res.status(400).json({ message: 'No file uploaded' });
+//       }
+
+//       const { title, message } = req.body;
+//       console.log(req.body);
+      
+//       const imageUrl = `/uploads/promotions/${req.file.filename}`; // Generate the image URL
+
+//       // Save the new promotion with message
+//       const newPromotion = new Promo({ title, Image: imageUrl, message });
+//       await newPromotion.save();
+
+//       res.status(201).json({
+//         message: 'Promotion created successfully',
+//         promotion: newPromotion,
+//         image: imageUrl
+//       });
+//     } catch (error) {
+//       res.status(500).json({ message: error.message });
+//     }
+//   });
+// };
+
 exports.createPromotion = async (req, res) => {
-  upload.single('Image')(req, res, async (err) => {
-    if (err instanceof multer.MulterError) {
-      return res.status(500).json({ message: err.message });
-    } else if (err) {
-      return res.status(400).json({ message: 'Invalid file format' });
-    }
-
-    try {
-      if (!req.file) {
-        return res.status(400).json({ message: 'No file uploaded' });
-      }
-
-      const { title, message } = req.body;
-      console.log(req.body);
-      
-      const imageUrl = `/uploads/promotions/${req.file.filename}`; // Generate the image URL
-
-      // Save the new promotion with message
-      const newPromotion = new Promo({ title, Image: imageUrl, message });
-      await newPromotion.save();
-
-      res.status(201).json({
-        message: 'Promotion created successfully',
-        promotion: newPromotion,
-        image: imageUrl
-      });
-    } catch (error) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-};
-
-// Update a promotion by ID
-exports.updatePromotion = async (req, res) => {
-  const { title, message } = req.body; // Include message field
-
-  // Handle image upload in update
-  upload.single('Image')(req, res, async (err) => {
-    if (err instanceof multer.MulterError) {
-      return res.status(500).json({ message: err.message });
-    } else if (err) {
-      return res.status(400).json({ message: 'Invalid file format' });
-    }
-
-    try {
-      let updatedPromotionData = { title, message }; // Include message field in update data
-      console.log(req.body);
-      
-      // If a new image file is uploaded, include the new image URL
-      if (req.file) {
-        const newImageUrl = `/uploads/promotions/${req.file.filename}`;
-        updatedPromotionData.Image = newImageUrl;
-      }
-
-      const updatedPromotion = await Promo.findByIdAndUpdate(
-        req.params.id,
-        updatedPromotionData,
-        { new: true, runValidators: true }
-      );
-
-      if (!updatedPromotion) {
-        return res.status(404).json({ message: 'Promotion not found' });
-      }
-
-      res.status(200).json(updatedPromotion);
-    } catch (error) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-};
-
-
-// Delete a promotion by ID
-exports.deletePromotion = async (req, res) => {
   try {
-    const deletedPromotion = await Promo.findByIdAndDelete(req.params.id);
-    if (!deletedPromotion) {
+    const { title, message } = req.body;
+    let imageUrl = '';
+
+    if (req.file) {
+      // Wrap Cloudinary upload in a Promise
+      imageUrl = await new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          { folder: 'promotions' },
+          (error, result) => {
+            if (error) {
+              reject(error);
+            } else {
+              resolve(result.secure_url);
+            }
+          }
+        );
+        uploadStream.end(req.file.buffer);
+      });
+    }
+
+    // Create promotion with Cloudinary URL
+    const newPromotion = new Promo({ title, Image: imageUrl, message });
+    await newPromotion.save();
+
+    res.status(201).json({
+      message: 'Promotion created successfully',
+      promotion: newPromotion,
+      image: imageUrl,
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Internal Server Error', error: error.message });
+  }
+};
+// Update a promotion by ID
+// exports.updatePromotion = async (req, res) => {
+//   const { title, message } = req.body; // Include message field
+
+//   // Handle image upload in update
+//   upload.single('Image')(req, res, async (err) => {
+//     if (err instanceof multer.MulterError) {
+//       return res.status(500).json({ message: err.message });
+//     } else if (err) {
+//       return res.status(400).json({ message: 'Invalid file format' });
+//     }
+
+//     try {
+//       let updatedPromotionData = { title, message }; // Include message field in update data
+//       console.log(req.body);
+      
+//       // If a new image file is uploaded, include the new image URL
+//       if (req.file) {
+//         const newImageUrl = `/uploads/promotions/${req.file.filename}`;
+//         updatedPromotionData.Image = newImageUrl;
+//       }
+
+//       const updatedPromotion = await Promo.findByIdAndUpdate(
+//         req.params.id,
+//         updatedPromotionData,
+//         { new: true, runValidators: true }
+//       );
+
+//       if (!updatedPromotion) {
+//         return res.status(404).json({ message: 'Promotion not found' });
+//       }
+
+//       res.status(200).json(updatedPromotion);
+//     } catch (error) {
+//       res.status(500).json({ message: error.message });
+//     }
+//   });
+// };
+exports.updatePromotion = async (req, res) => {
+  try {
+    const { title, message } = req.body;
+    let updatedPromotionData = { title, message };
+
+    if (req.file) {
+      try {
+        // Upload new image to Cloudinary
+        const result = await new Promise((resolve, reject) => {
+          const stream = cloudinary.uploader.upload_stream(
+            { folder: 'promotions' },
+            (error, result) => {
+              if (error) reject(error);
+              else resolve(result);
+            }
+          );
+          stream.end(req.file.buffer);
+        });
+
+        updatedPromotionData.Image = result.secure_url;
+      } catch (uploadError) {
+        return res.status(500).json({ message: 'Image upload failed', error: uploadError.message });
+      }
+    }
+
+    const updatedPromotion = await Promo.findByIdAndUpdate(req.params.id, updatedPromotionData, {
+      new: true,
+      runValidators: true,
+    });
+
+    if (!updatedPromotion) {
       return res.status(404).json({ message: 'Promotion not found' });
     }
-    res.status(200).json({ message: 'Promotion deleted successfully' });
+
+    res.status(200).json(updatedPromotion);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
+// Delete a promotion by ID
+// exports.deletePromotion = async (req, res) => {
+//   try {
+//     const deletedPromotion = await Promo.findByIdAndDelete(req.params.id);
+//     if (!deletedPromotion) {
+//       return res.status(404).json({ message: 'Promotion not found' });
+//     }
+//     res.status(200).json({ message: 'Promotion deleted successfully' });
+//   } catch (error) {
+//     res.status(500).json({ message: error.message });
+//   }
+// };
+
+// Delete a promotion and remove the image from Cloudinary
+exports.deletePromotion = async (req, res) => {
+  try {
+    const promotion = await Promo.findById(req.params.id);
+    if (!promotion) return res.status(404).json({ message: 'Promotion not found' });
+
+    if (promotion.Image) {
+      // Extract public ID and delete from Cloudinary
+      const publicId = promotion.Image.split('/').pop().split('.')[0];
+      await cloudinary.uploader.destroy(`promotions/${publicId}`);
+    }
+
+    await Promo.findByIdAndDelete(req.params.id);
+    res.status(200).json({ message: 'Promotion deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 // Serve the uploaded image
 exports.getImage = (req, res) => {
   const imageName = req.params.imageName;
@@ -159,7 +267,6 @@ exports.getImage = (req, res) => {
   });
 };
 
-
 exports.getUnreadPromotions = async (req, res) => {
   try {
     const promotions = await Promo.find({ unread: true }).sort({ timestamp: -1 });
@@ -168,7 +275,6 @@ exports.getUnreadPromotions = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-
 // Mark promotion as read
 exports.updatereadPromotions = async (req, res) => {
   try {
@@ -178,7 +284,6 @@ exports.updatereadPromotions = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-
 
 exports.getTodaysMessages = async (req, res) => {
   try {

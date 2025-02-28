@@ -14,7 +14,6 @@
 //   module.exports=mongoose.model('Promo',promotionsSchema)
 
 
-
 const mongoose = require('mongoose');
 
 const promotionsSchema = new mongoose.Schema({

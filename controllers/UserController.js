@@ -2,10 +2,10 @@ const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 const User = require('../models/UsersSchema');
-
+const mongoose = require('mongoose');
 // Create a new user (Registration)
 exports.registerUser = async (req, res) => {
-  const { username, email, id, phoneNumber } = req.body; // Receiving `id` as `facebook_id`
+  const { username, email, id, phoneNumber, password, address } = req.body; // Receiving address fields
 
   console.log(req.body);
 
@@ -21,8 +21,8 @@ exports.registerUser = async (req, res) => {
 
     // Hash password only if provided (normal email-password registration)
     let hashedPassword = null;
-    if (req.body.password) {
-      hashedPassword = await bcrypt.hash(req.body.password, 10);
+    if (password) {
+      hashedPassword = await bcrypt.hash(password, 10);
     }
 
     // Create a new user (without password for Facebook signup)
@@ -32,6 +32,14 @@ exports.registerUser = async (req, res) => {
       password: hashedPassword, // null if Facebook signup
       phoneNumber,
       facebook_id: id, // Save Facebook ID
+      address: {
+        country: address?.country || "",
+        state: address?.state || "",
+        city: address?.city || "",
+        addressLine1: address?.addressLine1 || "",
+        addressLine2: address?.addressLine2 || "",
+        pincode: address?.pincode || "",
+      }
     });
 
     await newUser.save();
@@ -44,10 +52,9 @@ exports.registerUser = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
-
 // Login user
 exports.loginUser = async (req, res) => {
-  const { email, password, id } = req.body; // Extract email, password, or Facebook id
+  const { email, password, id } = req.body; // Extract email, password, or Facebook ID
 
   try {
     // Facebook Login: If the request contains only `id`
@@ -66,6 +73,7 @@ exports.loginUser = async (req, res) => {
         _id: user._id,
         name: user.username,
         email: user.email,
+        address: user.address || {} // Include address details
       });
     }
 
@@ -88,6 +96,7 @@ exports.loginUser = async (req, res) => {
           _id: user._id,
           name: user.username,
           email: user.email,
+          address: user.address || {} // Include address details
         });
       }
 
@@ -100,6 +109,7 @@ exports.loginUser = async (req, res) => {
         _id: "admin_id",
         name: "Admin Name",
         email: email,
+        address: {} // Empty address for default admin login
       });
     }
 
@@ -123,6 +133,7 @@ exports.loginUser = async (req, res) => {
       _id: user._id,
       name: user.username,
       email: user.email,
+      address: user.address || {} // Include address details
     });
 
   } catch (err) {
@@ -235,13 +246,51 @@ exports.resetPassword = async (req, res) => {
 // Get all users
 exports.getAllUsers = async (req, res) => {
   try {
-    const users = await User.find(); // Fetch all users from the database
-    res.status(200).json(users); // Send the list of users as the response
+    const page = parseInt(req.query.page) || 1;  // Get page number, default to 1
+    const limit = parseInt(req.query.limit) || 10; // Get limit per page, default to 10
+    const skip = (page - 1) * limit; // Calculate how many records to skip
+
+    // Fetch paginated users from database
+    const users = await User.find().skip(skip).limit(limit);
+
+    // Get total count of users (for frontend to know if there are more pages)
+    const totalUsers = await User.countDocuments();
+
+    res.status(200).json({
+      users, 
+      totalUsers,
+      totalPages: Math.ceil(totalUsers / limit), 
+      currentPage: page
+    });
   } catch (err) {
-    console.error('Error fetching users:', err);
-    res.status(500).json({ message: 'Error fetching users.' });
+    console.error("Error fetching users:", err);
+    res.status(500).json({ message: "Error fetching users." });
   }
 };
+exports.getUserById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Validate ID format
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid user ID format." });
+    }
+
+    // Convert to ObjectId
+    const objectId = new mongoose.Types.ObjectId(id);
+
+    // Fetch user from database
+    const user = await User.findById(objectId);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    res.status(200).json(user);
+  } catch (err) {
+    console.error("Error fetching user details:", err);
+    res.status(500).json({ message: "Error fetching user details." });
+  }}
 
 // Update user by ID
 // exports.updateUserById = async (req, res) => {
@@ -271,20 +320,23 @@ exports.getAllUsers = async (req, res) => {
 
 exports.updateUserById = async (req, res) => {
   const { id } = req.params;
-  const { email, password, username, phoneNumber } = req.body;
+  const { email, password, username, phoneNumber, address } = req.body;
+console.log(id)
+  // Convert id to ObjectId
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(400).json({ message: 'Invalid user ID format' });
+  }
+
+  const objectId = new mongoose.Types.ObjectId(id);
 
   // Prepare the update object, only including fields that are provided
   let updateData = {};
 
-  if (email) {
-    updateData.email = email;
-  }
-  if (username) {
-    updateData.username = username;
-  }
-  if (phoneNumber) {
-    updateData.phoneNumber = phoneNumber;
-  }
+  if (email) updateData.email = email;
+  if (username) updateData.username = username;
+  if (phoneNumber) updateData.phoneNumber = phoneNumber;
+  if (address) updateData.address = address; // Include address update
+
   if (password) {
     // Hash the password if it is provided
     try {
@@ -303,8 +355,8 @@ exports.updateUserById = async (req, res) => {
   try {
     // Find user by ID and update the fields
     const updatedUser = await User.findByIdAndUpdate(
-      id, // Find user by ID
-      updateData, // Update only the fields provided
+      objectId, 
+      { $set: updateData }, // Ensure only provided fields are updated
       { new: true } // Return the updated user document
     );
 
@@ -318,7 +370,6 @@ exports.updateUserById = async (req, res) => {
     res.status(500).json({ message: 'Error updating user', error });
   }
 };
-
 // Delete user by ID
 exports.deleteUserById = async (req, res) => {
   const { id } = req.params;

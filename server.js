@@ -9,6 +9,7 @@ const crypto = require('crypto');
 const morgan = require('morgan');
 const multer = require('multer');
 const path = require('path');
+const cors=require('cors');
 const fs = require('fs');
 const bodyParser=require('body-parser');
 const razorpay=require('razorpay');
@@ -19,6 +20,19 @@ dotenv.config();
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended:true}));
 
+app.use(cors({
+  origin: "*",
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true
+}));
+
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
+  next();
+});
 
 // const razorpay= new Razorpay({
 //   key_id:"rzp_test_1nMmT4lAg1n4uc",
@@ -55,6 +69,7 @@ const promotionRoute=require('./routes/PromotionRoute');
 const reviewRoute=require('./routes/ReviewRoute');
 const userRoute=require('./routes/UserRoute');
 const cartRoute=require('./routes/CartRoute');
+const typeRoute=require('./routes/TypeRoute');
 const linkedProductRoute=require('./routes/LikedproductRoute');
 const Razorpay = require('razorpay');
 
@@ -68,6 +83,7 @@ app.use('/api/users',userRoute);
 app.use('/api/promotions',promotionRoute);
 app.use('/api/products',productRoute);
 app.use('/api/carts',cartRoute);
+app.use('/api/types',typeRoute)
 app.use('/api/linkedproducts',linkedProductRoute);
 
 
@@ -122,8 +138,8 @@ app.post('/login', async (req, res) => {
       return res.status(200).json({
         success: true,
         message: 'Login successful',
-        username: 'redcollar', // Admin username
-        isAdmin: true, // Mark as admin
+        username: 'redcollar',
+        isAdmin: true,
       });
     }
 
@@ -143,8 +159,8 @@ app.post('/login', async (req, res) => {
     res.status(200).json({
       success: true,
       message: 'Login successful',
-      username: email.split('@')[0], // Extract username from email
-      isAdmin: user.isAdmin || false, // Default to false if not admin
+      username: email.split('@')[0],
+      isAdmin: user.isAdmin || false,
     });
   } catch (err) {
     console.error('Error during login:', err);
@@ -153,9 +169,9 @@ app.post('/login', async (req, res) => {
 });
 // Endpoint for sending reset password email
 const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com', // SMTP server for Gmail
-  port: 587, // Secure SMTP port for Gmail
-  secure: false, // Use STARTTLS (false for port 587)
+  host: 'smtp.gmail.com',
+  port: 587,
+  secure: false,
   auth: {
     user: 'clinetredcollar@gmail.com',
     pass: 'ipehalalhlzctbun'
