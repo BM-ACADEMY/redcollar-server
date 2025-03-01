@@ -18,7 +18,7 @@ const productSchema = new mongoose.Schema(
     similar_products: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }], 
     rating: { type: Number, default: 0 },
     is_active: { type: Boolean, default: true },
-    deliveryOption:{type:String,enum:['FREE DELIVERY','PURCHASE ABOVE 500',]},
+    deliveryOption:{type:String},
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },
   },
