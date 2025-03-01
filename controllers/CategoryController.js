@@ -117,14 +117,21 @@ exports.createCategory = async (req, res) => {
     let imageUrl = '';
 
     if (req.file) {
-      // Upload image to Cloudinary
-      const result = await cloudinary.uploader.upload_stream(
-        { folder: 'categories' },
-        (error, result) => {
-          if (error) return res.status(500).json({ message: 'Image upload failed', error });
-          imageUrl = result.secure_url;
-        }
-      ).end(req.file.buffer);
+      // Convert upload_stream to a promise
+      const uploadToCloudinary = (fileBuffer) => {
+        return new Promise((resolve, reject) => {
+          const stream = cloudinary.uploader.upload_stream(
+            { folder: 'categories' },
+            (error, result) => {
+              if (error) return reject(error);
+              resolve(result.secure_url);
+            }
+          );
+          stream.end(fileBuffer);
+        });
+      };
+
+      imageUrl = await uploadToCloudinary(req.file.buffer);
     }
 
     // Create category with Cloudinary URL
@@ -173,14 +180,21 @@ exports.updateCategory = async (req, res) => {
     const updatedData = { ...req.body };
 
     if (req.file) {
-      // Upload new image to Cloudinary
-      const result = await cloudinary.uploader.upload_stream(
-        { folder: 'categories' },
-        (error, result) => {
-          if (error) return res.status(500).json({ message: 'Image upload failed', error });
-          updatedData.images = result.secure_url;
-        }
-      ).end(req.file.buffer);
+      // Convert upload_stream to a promise
+      const uploadToCloudinary = (fileBuffer) => {
+        return new Promise((resolve, reject) => {
+          const stream = cloudinary.uploader.upload_stream(
+            { folder: 'categories' },
+            (error, result) => {
+              if (error) return reject(error);
+              resolve(result.secure_url);
+            }
+          );
+          stream.end(fileBuffer);
+        });
+      };
+
+      updatedData.images = await uploadToCloudinary(req.file.buffer);
     }
 
     const updatedCategory = await Category.findByIdAndUpdate(req.params.id, updatedData, { new: true });
