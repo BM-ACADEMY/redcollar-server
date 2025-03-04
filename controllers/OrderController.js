@@ -373,9 +373,9 @@ exports.getOrderByEmailAndId = async (req, res) => {
       return res.status(400).json({ success: false, message: "Email and Order ID are required" });
     }
 
-    if (!mongoose.Types.ObjectId.isValid(orderId)) {
-      return res.status(400).json({ success: false, message: "Invalid Order ID" });
-    }
+    // if (!mongoose.Types.ObjectId.isValid(orderId)) {
+    //   return res.status(400).json({ success: false, message: "Invalid Order ID" });
+    // }
 
     // Find the user by email
     const user = await User.findOne({ email });

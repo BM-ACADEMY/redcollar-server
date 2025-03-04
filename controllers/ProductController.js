@@ -203,10 +203,11 @@ exports.getProductsByTypeId = async (req, res) => {
     console.log("Products found:", products.length); // Log product count
 
     if (!products.length) {
-      return res.status(404).json({ message: 'No products found for this type' });
+      return res.status(200).json([]); // Return an empty list instead of an object
     }
+    
 
-    res.status(200).json(products);
+    res.status(200).json(products || []) ;
   } catch (err) {
     console.error("Error fetching products:", err);
     res.status(500).json({ message: 'Error fetching products', error: err.message });
