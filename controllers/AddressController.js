@@ -23,9 +23,9 @@ exports.getAddressById = async (req, res) => {
 // ✅ Get address by ID
 exports.getAddressesByUserId = async (req, res) => {
   try {
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return res.status(400).json({ message: 'Invalid user ID format' });
-    }
+    // if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    //   return res.status(400).json({ message: 'Invalid user ID format' });
+    // }
 
     const userId = new mongoose.Types.ObjectId(req.params.id);
 

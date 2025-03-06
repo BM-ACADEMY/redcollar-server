@@ -17,6 +17,8 @@ router.post('/reset-password', userController.resetPassword);
 // Get all users
 router.get('/fetch-all-users', userController.getAllUsers);
 
+router.get('/fetch-user-by-id/:id', userController.getUserById);
+
 // Update user by ID
 router.put('/updateUserById/:id', userController.updateUserById);
 

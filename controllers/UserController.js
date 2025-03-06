@@ -4,36 +4,34 @@ const nodemailer = require('nodemailer');
 const User = require('../models/UsersSchema');
 const mongoose = require('mongoose');
 // Create a new user (Registration)
-
 exports.registerUser = async (req, res) => {
-  const { username, email, id, phoneNumber, password, address } = req.body;
+  const { username, email, id, phoneNumber, password, address } = req.body; // Receiving address fields
 
   console.log(req.body);
 
   try {
-    const query = { $or: [{ email: email.toLowerCase() }] };
-
-    if (id) {
-      query.$or.push({ facebook_id: id });
-    }
-
-    const existingUser = await User.findOne(query);
+    // Check if a user already exists with the given email or Facebook ID
+    const existingUser = await User.findOne({ 
+      $or: [{ email }, { facebook_id: id }] 
+    });
 
     if (existingUser) {
       return res.status(400).json({ error: "User already exists" });
     }
 
+    // Hash password only if provided (normal email-password registration)
     let hashedPassword = null;
     if (password) {
       hashedPassword = await bcrypt.hash(password, 10);
     }
 
+    // Create a new user (without password for Facebook signup)
     const newUser = new User({
       username,
-      email: email.toLowerCase(), // Ensure email consistency
-      password: hashedPassword,
+      email,
+      password: hashedPassword, // null if Facebook signup
       phoneNumber,
-      facebook_id: id || null,
+      facebook_id: id, // Save Facebook ID
       address: {
         country: address?.country || "",
         state: address?.state || "",
@@ -41,7 +39,7 @@ exports.registerUser = async (req, res) => {
         addressLine1: address?.addressLine1 || "",
         addressLine2: address?.addressLine2 || "",
         pincode: address?.pincode || "",
-      },
+      }
     });
 
     await newUser.save();
@@ -54,7 +52,6 @@ exports.registerUser = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
-
 // Login user
 exports.loginUser = async (req, res) => {
   const { email, password, id } = req.body; // Extract email, password, or Facebook ID
@@ -376,9 +373,9 @@ console.log(id)
 // Delete user by ID
 exports.deleteUserById = async (req, res) => {
   const { id } = req.params;
-    const objectId=new mongoose.Types.ObjectId(id);
+
   try {
-    const deletedUser = await User.findByIdAndDelete(objectId);
+    const deletedUser = await User.findByIdAndDelete(id);
 
     if (!deletedUser) {
       return res.status(404).json({ message: 'User not found' });
