@@ -48,6 +48,7 @@ exports.getAddressesByUserId = async (req, res) => {
 exports.createAddress = async (req, res) => {
   try {
     const newAddress = new Address(req.body);
+  
     await newAddress.save();
     res.status(201).json({ message: 'Address added successfully', address: newAddress });
   } catch (error) {
